@@ -1,6 +1,5 @@
 import hashlib
 import datetime
-import json
 
 
 class Block:
@@ -10,7 +9,7 @@ class Block:
         self.previous_hash = previous_hash
         self.hash = self.calc_hash()
 
-    def calc_hash(self):
+    def calc_hash(self):  # TODO Özet fonksiyonu ekle
         sha = hashlib.sha256()
         hash_str = str(self.timestamp) + str(self.data) + str(self.previous_hash)
         sha.update(hash_str.encode('utf-8'))
@@ -18,10 +17,10 @@ class Block:
 
     def toJson(self):
         return {
-            'timestamp': self.timestamp,
-            'data': self.data,
-            'previousHash': self.previous_hash,
-            'hash': self.hash
+            'timestamp': str(self.timestamp),
+            'data': str(self.data),
+            'previousHash': str(self.previous_hash),
+            'hash': str(self.hash)
         }
 
 
@@ -30,7 +29,7 @@ class Blockchain:
 
     def __init__(self):
         print("init")
-        self.chain.append(Block("Genesis Block", "0").toJson())
+        self.chain.append(Block("Genesis Block", 0))
 
     def add_block(self, data):
         previous_block = self.chain[-1]
