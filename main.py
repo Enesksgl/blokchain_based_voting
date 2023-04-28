@@ -5,6 +5,7 @@ from flask import Flask, jsonify, request, abort
 from blockchain import Blockchain, Block
 from functools import wraps
 from voting import Voting
+import sqlite3
 
 app = Flask(__name__)
 
@@ -25,13 +26,21 @@ users = [
     }
 ]
 
-votings = [
-    Voting(1, "Seçim 1", "12-12-2012", "12-01-2013", ["Enes", "Muhammed", "Derya Arda"], Blockchain()),
-    Voting(2, "Seçim 2", "12-12-2012", "12-01-2013", ["Enes", "Muhammed", "Derya Arda"], Blockchain()),
-    Voting(3, "Seçim 3", "12-12-2012", "12-01-2013", ["Enes", "Muhammed", "Derya Arda"], Blockchain()),
-    Voting(4, "Seçim 4", "12-12-2012", "12-01-2013", ["Enes", "Muhammed", "Derya Arda"], Blockchain()),
-]
+#votings = [
+#    Voting(1, "Seçim 1", "12-12-2012", "12-01-2013", ["Enes", "Muhammed", "Derya Arda"], Blockchain()),
+#    Voting(2, "Seçim 2", "12-12-2012", "12-01-2013", ["Enes", "Muhammed", "Derya Arda"], Blockchain()),
+#    Voting(3, "Seçim 3", "12-12-2012", "12-01-2013", ["Enes", "Muhammed", "Derya Arda"], Blockchain()),
+#    Voting(4, "Seçim 4", "12-12-2012", "12-01-2013", ["Enes", "Muhammed", "Derya Arda"], Blockchain()),
+#]
+conn = sqlite3.connect('votings.db')
+c = conn.cursor()
 
+for voting in votings:
+    c.execute("INSERT INTO votings VALUES (?, ?, ?, ?, ?, ?)", 
+              (voting.id, voting.name, voting.startDate, voting.endDate, str(voting.options), str(voting.blockchain.chain)))
+
+conn.commit()
+conn.close()
 
 def token_required(f):
     @wraps(f)
@@ -84,15 +93,36 @@ def add_block(current_user):
     return jsonify({"response": True})
 
 
+#@app.route('/api/getVotingList', methods=['GET'])
+#@token_required
+#def get_voting_list(current_user):
+#    filteredVoting = []
+#    for voting in votings:
+#        if voting.id in current_user['votingList']:
+#            filteredVoting.append(voting.toJson())
+#    return jsonify({'voting': filteredVoting})
+
+
 @app.route('/api/getVotingList', methods=['GET'])
 @token_required
 def get_voting_list(current_user):
-    filteredVoting = []
-    for voting in votings:
-        if voting.id in current_user['votingList']:
-            filteredVoting.append(voting.toJson())
-    return jsonify({'voting': filteredVoting})
+    conn = sqlite3.connect('votings.db')
+    c = conn.cursor()
 
+    filteredVoting = []
+    for row in c.execute("SELECT * FROM votings WHERE id IN ({})".format(','.join(str(id) for id in current_user['votingList']))):
+        voting = {
+            'id': row[0],
+            'name': row[1],
+            'startDate': row[2],
+            'endDate': row[3],
+            'options': eval(row[4])
+        }
+        filteredVoting.append(voting)
+
+    conn.close()
+
+    return jsonify({'voting': filteredVoting})
 
 if __name__ == '__main__':
     app.run(host="192.168.0.14")
